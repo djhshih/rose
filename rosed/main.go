@@ -55,24 +55,6 @@ func main() {
 	initLogs(os.Stdout, os.Stdout, os.Stderr)
 	initTables()
 
-	//// TEST
-
-	name := "ensembl_ids_hsapiens_head"
-	loadTable(name)
-
-	table := tables[name]
-	table.Print()
-
-	stable := NewSortedTable(table, "ensembl_gene_id")
-	fmt.Println(stable.Slice("ensembl_gene_id"))
-	fmt.Println(stable.Slice("ensembl_transcript_id"))
-
-	xs := []Identifier{"ENSG00000210100", "ENSG00000210077", "ENGSG00000111111", "ENSG00000281540"}
-	fmt.Println(stable.Map(xs, "ensembl_transcript_id"))
-	fmt.Println(stable.Map(xs, "ensembl_peptide_id"))
-
-	////
-
 	// Create listener
 	ln, err := net.Listen("tcp", connAddress)
 	if err != nil {
