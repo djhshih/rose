@@ -8,12 +8,6 @@ import (
 	"strings"
 )
 
-const (
-	fieldDelimiter = "\t"
-	idDelimiter    = ","
-	entryDelimiter = "\n"
-)
-
 type Identifier string
 
 type Table struct {
@@ -27,12 +21,12 @@ func NewTable(r io.Reader) *Table {
 	t := new(Table)
 	scanner := bufio.NewScanner(r)
 	if scanner.Scan() {
-		headers := strings.Split(scanner.Text(), fieldDelimiter)
+		headers := strings.Split(scanner.Text(), fieldDelim)
 		t.data = make(map[string][]Identifier)
 		t.ncols = len(headers)
 		m := 0
 		for scanner.Scan() {
-			tokens := strings.Split(scanner.Text(), fieldDelimiter)
+			tokens := strings.Split(scanner.Text(), fieldDelim)
 			for i, h := range headers {
 				t.data[h] = append(t.data[h], Identifier(tokens[i]))
 			}
@@ -114,7 +108,7 @@ func (s *SortedTable) Map(xs []Identifier, dest string) []Identifier {
 			for ; j < len(srcColumn) && srcColumn[j] == x; j++ {
 				if len(destColumn[j]) > 0 {
 					if len(id) > 0 {
-						id += idDelimiter + destColumn[j]
+						id += idDelim + destColumn[j]
 					} else {
 						id = destColumn[j]
 					}

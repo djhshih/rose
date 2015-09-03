@@ -3,24 +3,33 @@ package main
 import (
 	"bufio"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 )
 
-const (
-	CONN_HOST    = "127.0.0.1"
-	CONN_PORT    = "12053"
-	CONN_ADDRESS = CONN_HOST + ":" + CONN_PORT
-	CONN_TYPE    = "tcp"
+var (
+	connHost       string
+	connPort       string
+	connAddress    string
+	tablePathsFile string
 )
 
 const protocolName = "ROSE/0.1"
+
+const (
+	fieldDelim = "\t"
+	idDelim    = ","
+	entryDelim = "\n"
+	tableDelim = "/"
+)
 
 var (
 	ilog *log.Logger
@@ -30,6 +39,17 @@ var (
 
 var tables map[string]*Table
 var tablePaths map[string]string
+
+func init() {
+	tables = make(map[string]*Table)
+	tablePaths = make(map[string]string)
+
+	flag.StringVar(&connHost, "host", "127.0.0.1", "local host address to listen on")
+	flag.StringVar(&connPort, "port", "12053", "local host port to listen on")
+	connAddress = connHost + ":" + connPort
+
+	flag.StringVar(&tablePathsFile, "tables", "", "file with paths to tables")
+}
 
 func main() {
 	initLogs(os.Stdout, os.Stdout, os.Stderr)
@@ -54,39 +74,65 @@ func main() {
 	////
 
 	// Create listener
-	ln, err := net.Listen(CONN_TYPE, CONN_ADDRESS)
+	ln, err := net.Listen("tcp", connAddress)
 	if err != nil {
-		elog.Println("Cannot create listener:", err)
-		os.Exit(1)
+		elog.Fatal("Cannot create listener:", err)
 	}
 	defer ln.Close()
 
 	// Listen for incoming connections
-	ilog.Println("Listening on", CONN_ADDRESS)
+	ilog.Println("Listening on", connAddress)
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-			elog.Println("Cannot accept:", err)
-			os.Exit(1)
+			elog.Println("Cannot accept connection:", err)
 		} else {
+			go handleRequest(conn)
 			ilog.Println("Accepted connection from", conn.RemoteAddr())
 		}
-		go handleRequest(conn)
 	}
 }
 
 func initTables() {
-	tables = make(map[string]*Table)
-	tablePaths = make(map[string]string)
+	var paths []string
 
-	paths := []string{
-		"test.tsv",
-		"/Users/davids/data/biomart/release-81/ensembl_ids_hsapiens_head.tsv",
-		"/Users/davids/data/biomart/release-81/ensembl_ids_hsapiens.tsv",
-		"/Users/davids/data/biomart/release-81/ensembl_ids_mmusculus.tsv",
-		"/Users/davids/data/biomart/release-81/compara_homologs_hsapiens-mmusculus.tsv",
+	if tablePathsFile != "" {
+		f, err := os.Open(tablePathsFile)
+		if err != nil {
+			elog.Println(err)
+		} else {
+			defer f.Close()
+
+			scanner := bufio.NewScanner(f)
+			for scanner.Scan() {
+				paths = append(paths, scanner.Text())
+			}
+		}
 	}
+
+	tableDirs := os.Getenv("ROSE_TABLES_PATH")
+	if tableDirs != "" {
+		tableExts := os.Getenv("ROSE_TABLES_EXT")
+		if tableExts == "" {
+			tableExts = "tsv"
+		}
+		for _, dir := range strings.Split(tableDirs, string(os.PathListSeparator)) {
+			for _, ext := range strings.Split(tableExts, string(os.PathListSeparator)) {
+				pattern := dir + string(os.PathSeparator) + "*." + ext
+				matches, _ := filepath.Glob(pattern)
+				for _, fn := range matches {
+					paths = append(paths, fn)
+				}
+			}
+		}
+	}
+
+	ilog.Println("Table paths:" + entryDelim + strings.Join(paths, entryDelim))
 	addTablePaths(paths)
+
+	if len(tablePaths) == 0 {
+		elog.Fatal("No tables are available for loading")
+	}
 }
 
 func initLogs(i io.Writer, w io.Writer, e io.Writer) {
@@ -172,7 +218,7 @@ func handleRequest(conn net.Conn) {
 				if len(outputIds) > 0 {
 					response = initResponse(200)
 					for _, id := range outputIds {
-						response += string(id) + entryDelimiter
+						response += string(id) + entryDelim
 					}
 				} else {
 					response = initResponse(204)
@@ -242,7 +288,7 @@ func handleRequest(conn net.Conn) {
 		}
 	case "list":
 		response = initResponse(200)
-		response += strings.Join(getTables(), entryDelimiter) + entryDelimiter
+		response += strings.Join(getTables(), entryDelim) + entryDelim
 	default:
 		response = initResponse(400)
 		elog.Println("Unknown command")
@@ -344,7 +390,14 @@ func addTablePath(path string) error {
 		err = errors.New("Table name conflict exists for " + name)
 		wlog.Println(err)
 	} else {
-		tablePaths[name] = path
+		// add path only if target is a valid file
+		if info, err := os.Stat(path); err != nil {
+			elog.Println("Path is not found or not accessible:", path)
+		} else if !info.Mode().IsRegular() {
+			elog.Println("Cannot add table path, not a file:", path)
+		} else {
+			tablePaths[name] = path
+		}
 	}
 	return err
 }
