@@ -293,7 +293,7 @@ func reloadTable(name string) error {
 func reloadAllTables() error {
 	var err error
 	for k := range tables {
-		if e := unloadTable(k); e != nil {
+		if e := reloadTable(k); e != nil {
 			err = e
 		}
 	}
