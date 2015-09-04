@@ -11,10 +11,11 @@ import (
 type Identifier string
 
 type Table struct {
-	data map[string][]Identifier
-	// number of rows
+	data  map[string][]Identifier
 	nrows int
 	ncols int
+	// tables by field and mapped by the same field
+	sorted map[string]*SortedTable
 }
 
 func NewTable(r io.Reader) *Table {
@@ -34,6 +35,7 @@ func NewTable(r io.Reader) *Table {
 		}
 		t.nrows = m
 	}
+	t.sorted = make(map[string]*SortedTable)
 	return t
 }
 
@@ -45,6 +47,17 @@ func (t *Table) Print() {
 		}
 		fmt.Println()
 	}
+}
+
+// Return a SortedTable sorted on field
+func (t *Table) Sorted(field string) (s *SortedTable) {
+	s = t.sorted[field]
+	if s == nil {
+		s = NewSortedTable(t, field)
+		// cache SortedTable
+		t.sorted[field] = s
+	}
+	return s
 }
 
 // SortedTable is sorted upon initialization and maintains the sorted order by
@@ -71,10 +84,8 @@ func NewSortedTable(t *Table, field string) *SortedTable {
 }
 
 func (s *SortedTable) FieldExists(f string) bool {
-	if len(s.table.data[f]) > 0 {
-		return true
-	}
-	return false
+	_, exists := s.table.data[f]
+	return exists
 }
 
 func (s *SortedTable) At(i int, field string) Identifier {
@@ -90,7 +101,7 @@ func (s *SortedTable) Slice(field string) []Identifier {
 	return sorted
 }
 
-// x_i must be in the field on which s has been sorted.
+// x of xs must be in the field on which s has been sorted.
 func (s *SortedTable) Map(xs []Identifier, dest string) []Identifier {
 	y := make([]Identifier, len(xs))
 	if s.FieldExists(dest) {

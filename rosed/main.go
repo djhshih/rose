@@ -279,8 +279,11 @@ func handleRequest(conn net.Conn) {
 
 func mapIdentifiers(xs []Identifier, tableName, srcId, destId string) (ys []Identifier, err error) {
 	if err = loadTable(tableName); err == nil {
-		stable := NewSortedTable(tables[tableName], srcId)
-		ys = stable.Map(xs, destId)
+		sorted := tables[tableName].Sorted(srcId)
+		ilog.Print(sorted)
+		//sorted := NewSortedTable(tables[tableName], srcId)
+		sorted.table.Print()
+		ys = sorted.Map(xs, destId)
 	}
 	return
 }
@@ -356,6 +359,7 @@ func loadAllTables() error {
 	return err
 }
 
+// getTables return a list of available tables
 func getTables() (names []string) {
 	for k := range tablePaths {
 		names = append(names, k)
