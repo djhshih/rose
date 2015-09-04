@@ -39,14 +39,15 @@ func NewTable(r io.Reader) *Table {
 	return t
 }
 
-func (t *Table) Print() {
+func (t *Table) String() (s string) {
 	for h, _ := range t.data {
-		fmt.Printf("%s: ", h)
+		s += fmt.Sprintf("%s: ", h)
 		for _, v := range t.data[h] {
-			fmt.Printf("%s ", v)
+			s += fmt.Sprintf("%s ", v)
 		}
-		fmt.Println()
+		s += fmt.Sprintln()
 	}
+	return
 }
 
 // Return a SortedTable sorted on field
