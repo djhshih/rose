@@ -1,7 +1,13 @@
 # rose
 
-This package consists of a client and a server for converting gene identifiers
-based on tables in tab-delimited format.
+> What's in a name? that which we call a rose
+> By any other name would smell as sweet
+> -- William Shakespeare
+
+This package faciliates identifier conversion. It consists of a client and a
+server program for converting identifiers based on conversion tables in
+tab-delimited format. Such conversion tables can be retrieved from
+resources including BioMart UCSC Genome Browser.
 
 ## Installation
 
