@@ -66,7 +66,11 @@ func main() {
 		fmt.Println("rosed - Identifier conversion server (version " + programVersion + ")")
 		fmt.Println()
 
-		flag.Usage()
+		fmt.Println("Usage: rosed [options]")
+		fmt.Println()
+
+		fmt.Println("Optional arguments:")
+		flag.PrintDefaults()
 
 		fmt.Println()
 		fmt.Println("Environmental variables:")
