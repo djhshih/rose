@@ -11,7 +11,7 @@ resources including BioMart UCSC Genome Browser.
 
 ## Requirement
 
-To compile this package, you will need (go)[https://golang.org/].
+To compile this package, you will need [go](https://golang.org).
 
 ## Installation
 
