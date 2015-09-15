@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -19,15 +20,20 @@ var (
 	connPort       string
 	connAddress    string
 	tablePathsFile string
+	showHelp       bool
 )
 
-const protocolName = "ROSE/0.1"
+const (
+	programVersion = "0.1"
+	protocolName   = "ROSE/0.1"
+)
 
 const (
-	fieldDelim = "\t"
-	idDelim    = ","
-	entryDelim = "\n"
-	tableDelim = "/"
+	fieldDelim    = "\t"
+	idDelim       = ","
+	entryDelim    = "\n"
+	tableDelim    = "/"
+	commandPrefix = "#"
 )
 
 var (
@@ -44,13 +50,31 @@ func init() {
 	tablePaths = make(map[string]string)
 
 	flag.StringVar(&connHost, "host", "127.0.0.1", "local host address to listen on")
-	flag.StringVar(&connPort, "port", "12053", "local host port to listen on")
-	connAddress = connHost + ":" + connPort
+	flag.StringVar(&connPort, "port", "12053", "local port to listen on")
 
 	flag.StringVar(&tablePathsFile, "tables", "", "file with paths to tables")
+
+	flag.BoolVar(&showHelp, "help", false, "show help message")
 }
 
 func main() {
+
+	flag.Parse()
+	connAddress = connHost + ":" + connPort
+
+	if showHelp {
+		fmt.Println("rosed - Identifier conversion server (version " + programVersion + ")")
+		fmt.Println()
+
+		flag.Usage()
+
+		fmt.Println()
+		fmt.Println("Environmental variables:")
+		fmt.Println("   ROSE_TABLES_PATH  Colon-separated paths to directories with table files")
+		fmt.Println("   ROSE_TABLES_EXT   Colon-separated table file extensions [default: tsv]")
+		return
+	}
+
 	initLogs(os.Stdout, os.Stdout, os.Stderr)
 	initTables()
 
@@ -175,13 +199,17 @@ func handleRequest(conn net.Conn) {
 		elog.Println("Cannot read request")
 		return
 	} else {
+		// first line is the command
 		command = scanner.Text()
+		// remaining lines are identifier
 		for scanner.Scan() {
 			inputIds = append(inputIds, Identifier(scanner.Text()))
 		}
 	}
 
-	// first line is the command
+	// strip possible prefix from command
+	command = strings.TrimLeft(command, commandPrefix+" ")
+
 	tokens := strings.Split(command, " ")
 	n := len(tokens) - 1
 	action := tokens[0]
@@ -193,7 +221,7 @@ func handleRequest(conn net.Conn) {
 
 			if err != nil {
 				response = initResponse(404)
-				elog.Println("Cannot map identifiers from", conn.RemoteAddr())
+				elog.Println("Cannot map identifiers from", conn.RemoteAddr(), "because:", err)
 			} else {
 				// Concatenate identifiers
 				if len(outputIds) > 0 {
@@ -267,9 +295,12 @@ func handleRequest(conn net.Conn) {
 			response = initResponse(400)
 			elog.Println("Invalid command, expecting: reload [<table> ...]")
 		}
-	case "list":
+	case "avail":
 		response = initResponse(200)
 		response += strings.Join(getTables(), entryDelim) + entryDelim
+	case "loaded":
+		response = initResponse(200)
+		response += strings.Join(getLoadedTables(), entryDelim) + entryDelim
 	default:
 		response = initResponse(400)
 		elog.Println("Unknown command")
@@ -281,6 +312,9 @@ func mapIdentifiers(xs []Identifier, tableName, srcId, destId string) (ys []Iden
 	if err = loadTable(tableName); err == nil {
 		sorted := tables[tableName].Sorted(srcId)
 		ys = sorted.Map(xs, destId)
+		if ys == nil {
+			err = errors.New("invalid identiifer type " + destId)
+		}
 	}
 	return
 }
@@ -305,7 +339,7 @@ func unloadTable(name string) error {
 		delete(tables, name)
 		return nil
 	}
-	err := errors.New("Table " + name + " does not exist")
+	err := errors.New("unknown table " + name)
 	wlog.Println(err)
 	return err
 }
@@ -339,7 +373,7 @@ func loadTable(name string) (err error) {
 			ilog.Println("Loaded table", name)
 		}
 	} else {
-		err = errors.New("Path to table " + name + " is unknown.")
+		err = errors.New("unknown path to table " + name)
 		elog.Println(err)
 	}
 
@@ -365,11 +399,20 @@ func getTables() (names []string) {
 	return
 }
 
+// getLoadedTables return a list of loaded tables
+func getLoadedTables() (names []string) {
+	for k := range tables {
+		names = append(names, k)
+	}
+	sort.StringSlice(names).Sort()
+	return
+}
+
 func addTablePath(path string) error {
 	var err error
 	name := getTableName(path)
 	if _, exists := tablePaths[name]; exists {
-		err = errors.New("Table name conflict exists for " + name)
+		err = errors.New("table name conflict with" + name)
 		wlog.Println(err)
 	} else {
 		// add path only if target is a valid file

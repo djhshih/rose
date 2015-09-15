@@ -103,9 +103,9 @@ func (s *SortedTable) Slice(field string) []Identifier {
 }
 
 // x of xs must be in the field on which s has been sorted.
-func (s *SortedTable) Map(xs []Identifier, dest string) []Identifier {
-	y := make([]Identifier, len(xs))
+func (s *SortedTable) Map(xs []Identifier, dest string) (ys []Identifier) {
 	if s.FieldExists(dest) {
+		ys = make([]Identifier, len(xs))
 		srcColumn := s.Slice(s.field)
 		destColumn := s.Slice(dest)
 		for i, x := range xs {
@@ -126,10 +126,10 @@ func (s *SortedTable) Map(xs []Identifier, dest string) []Identifier {
 					}
 				}
 			}
-			y[i] = id
+			ys[i] = id
 		}
 	}
-	return y
+	return
 }
 
 func (s *SortedTable) Len() int {
