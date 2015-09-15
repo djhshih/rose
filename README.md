@@ -9,6 +9,10 @@ server program for converting identifiers based on conversion tables in
 tab-delimited format. Such conversion tables can be retrieved from
 resources including BioMart UCSC Genome Browser.
 
+## Requirement
+
+To compile this package, you will need (go)[https://golang.org/].
+
 ## Installation
 
     go install ./rose
