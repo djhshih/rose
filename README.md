@@ -1,7 +1,7 @@
 # rose
 
-> What's in a name? that which we call a rose
-> By any other name would smell as sweet
+> What's in a name? that which we call a rose  
+> By any other name would smell as sweet  
 > -- William Shakespeare
 
 This package faciliates identifier conversion. It consists of a client and a
