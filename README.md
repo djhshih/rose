@@ -20,7 +20,7 @@ Assuming your `GOPATH` has been setup, you can simply download and install this
 package by
 
     go get github.com/djhshih/rose
-		go get github.com/djhshih/rosed
+    go get github.com/djhshih/rosed
 
 If you choose to clone this project to a non-canonical location, you can also
 install the programs within the project directory by
