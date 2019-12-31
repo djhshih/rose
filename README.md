@@ -8,8 +8,7 @@ This package facilitates name identifier conversion. It consists of a client
 (`rose`) and a server (`rosed`) program for converting identifiers from one type
 to another based on conversion tables stored in tab-delimited format.
 
-Existing conversion tables can be retrieved from such resources as BioMart and UCSC
-Genome Browser using, for example, [apiarius](https://github.com/djhshih/apiarius).
+Existing conversion tables can be retrieved from such public databases using, for example, [apiarius](https://github.com/djhshih/apiarius).
 
 ## Requirement
 
